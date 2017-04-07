@@ -50,6 +50,7 @@ const ReactDataGrid = React.createClass({
   ],
 
   propTypes: {
+    quickEdit:React.PropTypes.bool,
     rowHeight: React.PropTypes.number.isRequired,
     headerRowHeight: React.PropTypes.number,
     headerFiltersHeight: React.PropTypes.number,
@@ -201,6 +202,9 @@ const ReactDataGrid = React.createClass({
     if (this.props.onRowClick && typeof this.props.onRowClick === 'function') {
       this.props.onRowClick(cell.rowIdx, this.props.rowGetter(cell.rowIdx));
     }
+    if(this.props.quickEdit){
+      setTimeout(()=>this.setActive('Enter'));
+    }    
   },
 
   onCellContextMenu: function(cell: SelectedType) {
@@ -677,6 +681,9 @@ const ReactDataGrid = React.createClass({
       idx = this.state.selected.idx + cellDelta;
     }
     this.onSelect({ idx: idx, rowIdx: rowIdx });
+    if(this.props.quickEdit){
+      setTimeout(()=>this.setActive('Enter'));
+    }   
   },
 
   getNbrColumns() {
