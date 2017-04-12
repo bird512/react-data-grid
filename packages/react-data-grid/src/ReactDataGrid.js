@@ -50,7 +50,8 @@ const ReactDataGrid = React.createClass({
   ],
 
   propTypes: {
-    quickEdit:React.PropTypes.bool,
+    quickEdit:React.PropTypes.bool,           //enable this will dispaly editer contail when focus in             --add by Lei
+    focusEditOnly:React.PropTypes.bool,       //enable this will skip none ediable cells when press tab or arraw  --add by Lei
     rowHeight: React.PropTypes.number.isRequired,
     headerRowHeight: React.PropTypes.number,
     headerFiltersHeight: React.PropTypes.number,
@@ -671,15 +672,30 @@ const ReactDataGrid = React.createClass({
     // we need to prevent default as we control grid scroll
     // otherwise it moves every time you left/right which is janky
     e.preventDefault();
+    this.selected = this.state.selected;
     let rowIdx;
     let idx;
     const { cellNavigationMode } = this.props;
-    if (cellNavigationMode !== 'none') {
-      ({idx, rowIdx} = this.calculateNextSelectionPosition(cellNavigationMode, cellDelta, rowDelta));
-    } else {
-      rowIdx = this.state.selected.rowIdx + rowDelta;
-      idx = this.state.selected.idx + cellDelta;
+    const nbrColumns = this.getNbrColumns();
+    let finished = false;
+    for(let i = 0;i<nbrColumns;i++){
+      if (cellNavigationMode !== 'none') {
+        ({idx, rowIdx} = this.calculateNextSelectionPosition(cellNavigationMode, cellDelta, rowDelta));
+      } else {
+        rowIdx = this.selected.rowIdx + rowDelta;
+        idx = this.selected.idx + cellDelta;
+      }
+      let row = this.props.rowGetter(rowIdx);
+      let col = this.getColumn(idx);  
+      if (!this.props.focusEditOnly || (col && ColumnUtils.canEdit(col, row, this.props.enableCellSelect))) {
+        finished = true;
+        break;
+      }   
     }
+    if(!finished){
+      return;
+    }
+
     this.onSelect({ idx: idx, rowIdx: rowIdx });
     if(this.props.quickEdit){
       setTimeout(()=>this.setActive('Enter'));
@@ -700,31 +716,34 @@ const ReactDataGrid = React.createClass({
 
   calculateNextSelectionPosition(cellNavigationMode: string, cellDelta: number, rowDelta: number) {
     let _rowDelta = rowDelta;
-    let idx = this.state.selected.idx + cellDelta;
+    let idx = this.selected.idx + cellDelta;
     const nbrColumns = this.getNbrColumns();
     if (cellDelta > 0) {
-      if (this.isAtLastCellInRow(nbrColumns)) {
-        if (cellNavigationMode === 'changeRow') {
-          _rowDelta = this.isAtLastRow() ? rowDelta : rowDelta + 1;
-          idx = this.isAtLastRow() ? idx : 0;
-        } else {
-          idx = 0;
+        //if (this.isAtLastCellInRow(nbrColumns)) {
+        if(this.selected.idx === nbrColumns - 1){
+          if (cellNavigationMode === 'changeRow') {
+            _rowDelta = this.selected.rowIdx === this.props.rowsCount - 1 ? rowDelta : rowDelta + 1;
+            idx = this.selected.rowIdx === this.props.rowsCount - 1 ? idx : 0;
+          } else {
+            idx = 0;
+          }
+        }
+      } else if (cellDelta < 0) {
+        //if (this.isAtFirstCellInRow()) {
+        if(this.selected.idx === 0){
+          if (cellNavigationMode === 'changeRow') {
+            _rowDelta = this.selected.rowIdx === 0 ? rowDelta : rowDelta - 1;
+            idx = this.selected.rowIdx === 0? 0 : nbrColumns - 1;
+          } else {
+            idx = nbrColumns - 1;
+          }
         }
       }
-    } else if (cellDelta < 0) {
-      if (this.isAtFirstCellInRow()) {
-        if (cellNavigationMode === 'changeRow') {
-          _rowDelta = this.isAtFirstRow() ? rowDelta : rowDelta - 1;
-          idx = this.isAtFirstRow() ? 0 : nbrColumns - 1;
-        } else {
-          idx = nbrColumns - 1;
-        }
-      }
-    }
-    let rowIdx = this.state.selected.rowIdx + _rowDelta;
+    let rowIdx = this.selected.rowIdx + _rowDelta;
+    this.selected = {idx, rowIdx};
     return {idx, rowIdx};
   },
-
+  
   isAtLastCellInRow(nbrColumns) {
     return this.state.selected.idx === nbrColumns - 1;
   },
