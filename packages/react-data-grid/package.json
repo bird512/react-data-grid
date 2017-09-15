@@ -1,6 +1,6 @@
 {
   "name": "react-data-grid-lei",
-  "version": "2.0.7",
+  "version": "2.0.9",
   "description": "The grid core",
   "scripts": {
     "beforepublish": "node ../../ci/publish/replacePackageEntry react-data-grid true",
